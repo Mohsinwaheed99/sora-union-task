@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { Upload } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import LoginForm from '../components/LoginForm';
-import SignupForm from '../components/SignupForm';
+import LoginForm from '../LoginForm';
+import SignupForm from '../SignupForm';
 
-const AuthPages = () => {
+const Home = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -155,4 +155,4 @@ const AuthPages = () => {
   );
 };
 
-export default AuthPages;
+export default Home;
