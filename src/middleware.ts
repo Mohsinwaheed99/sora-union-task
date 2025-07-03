@@ -7,18 +7,12 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
-        if (token) return true;
-        
-        if (req.nextUrl.pathname.startsWith('/login') && !token) {
-          return false;
-        }
-        
-        return false;
+      authorized: ({ token }) => {
+        return !!token;
       },
     },
     pages: {
-      signIn: '/login',
+      signIn: '/',
     },
   }
 );
