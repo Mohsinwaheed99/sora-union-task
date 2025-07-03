@@ -48,3 +48,4 @@ export const getFolderPath = async (folderId: string): Promise<{ id: string; nam
   const { data } = await axios.get(`/folders/${folderId}/path`);
   return data.data;
 };
+

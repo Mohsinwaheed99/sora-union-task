@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Check file size (50MB limit)
     if (file.size > 50 * 1024 * 1024) {
       return NextResponse.json({ error: 'File too large' }, { status: 400 });
     }
