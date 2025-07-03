@@ -1,33 +1,20 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { getDatabase } from '../../lib/mongodb';
-import { ApiResponse } from '../../types/api';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
+import { getDatabase } from '@/app/lib/mongodb';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({
-      success: false,
-      error: 'Method not allowed'
-    });
-  }
-
-  const session = await getServerSession(req, res, authOptions);
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { q } = req.query;
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get('q');
 
-  if (!q || typeof q !== 'string' || q.trim().length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'Search query is required'
-    });
+  if (!q || q.trim().length === 0) {
+    return NextResponse.json({ success: false, error: 'Search query is required' }, { status: 400 });
   }
 
   try {
@@ -37,26 +24,18 @@ export default async function handler(
 
     const searchRegex = new RegExp(q.trim(), 'i');
 
-    // Search folders
-    const folders = await foldersCollection
-      .find({
-        userId: session.user.id,
-        name: { $regex: searchRegex }
-      })
-      .limit(20)
-      .toArray();
+    const folders = await foldersCollection.find({
+      userId: session.user.id,
+      name: { $regex: searchRegex }
+    }).limit(20).toArray();
 
-    // Search files
-    const files = await filesCollection
-      .find({
-        userId: session.user.id,
-        $or: [
-          { name: { $regex: searchRegex } },
-          { originalName: { $regex: searchRegex } }
-        ]
-      })
-      .limit(20)
-      .toArray();
+    const files = await filesCollection.find({
+      userId: session.user.id,
+      $or: [
+        { name: { $regex: searchRegex } },
+        { originalName: { $regex: searchRegex } }
+      ]
+    }).limit(20).toArray();
 
     const results = {
       folders: folders.map(folder => ({
@@ -73,16 +52,9 @@ export default async function handler(
       }))
     };
 
-    return res.status(200).json({
-      success: true,
-      data: results
-    });
-
+    return NextResponse.json({ success: true, data: results });
   } catch (error) {
     console.error('Search error:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Search failed'
-    });
+    return NextResponse.json({ success: false, error: 'Search failed' }, { status: 500 });
   }
 }

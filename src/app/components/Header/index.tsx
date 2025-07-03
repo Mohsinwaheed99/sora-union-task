@@ -5,7 +5,7 @@ import React from 'react'
 export const Header = () => {
   const { data: session } = useSession();
    const handleSignOut = async (): Promise<void> => {
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ callbackUrl: '/' });
   };
   return (
     <header className="bg-white shadow-sm border-b">

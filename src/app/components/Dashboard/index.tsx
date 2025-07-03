@@ -3,11 +3,7 @@ import React, { useState, useEffect, JSX, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { 
   Upload, 
-  LogOut, 
-  User, 
   Files, 
-  Settings, 
-  Home,
   FolderPlus,
   ArrowLeft,
   Loader2
@@ -24,23 +20,16 @@ import {
   deleteFolder as deleteFolderService,
   renameFolder as renameFolderService,
   fetchFolders as fetchFoldersService,
-  getFolderById,
-  moveFolder,
-  copyFolder,
-  getFolderPath
 } from '../../services/folder.service';
 
 import {
-  createFile as createFileService,
   deleteFile as deleteFileService,
   renameFile as renameFileService,
   fetchFiles as fetchFilesService,
-  getFileById,
-  moveFile,
-  copyFile,
   uploadFiles as uploadFilesService
 } from '../../services/file.service';
 import FilePreviewModal from '../FilePreview';
+import SearchBar from '../Searchbar';
 
 interface FolderType {
   id: string;
@@ -75,7 +64,6 @@ interface ContextMenuData {
   item: FolderType | FileType;
   type: 'folder' | 'file';
 }
-
 interface EditingItem extends FolderType {
   type: 'folder';
 }
@@ -403,6 +391,15 @@ export default function Dashboard(): JSX.Element {
               </button>
             </div>
           )}
+
+          <div className="mb-6">
+            <SearchBar
+              onNavigateToFolder={navigateToFolder}
+              onFilePreview={handleFilePreview}
+              onFileDownload={handleFileDownload}
+              className="max-w-md"
+            />
+          </div>
 
           <Breadcrumbs
             folderPath={folderPath}

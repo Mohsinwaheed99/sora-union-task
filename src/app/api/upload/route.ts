@@ -1,8 +1,6 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { v2 as cloudinary } from 'cloudinary';
-import { IncomingForm, File } from 'formidable';
-import { promises as fs } from 'fs';
 import { authOptions } from '@/app/lib/auth';
 
 if (process.env.CLOUDINARY_URL) {
@@ -14,42 +12,31 @@ if (process.env.CLOUDINARY_URL) {
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
 }
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const session = await getServerSession(req, res, authOptions);
-
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const form = new IncomingForm({
-      maxTotalFileSize: 50 * 1024 * 1024, 
-      maxFileSize: 50 * 1024 * 1024,
-    });
+    const session = await getServerSession(authOptions);
 
-    const [fields, files] = await form.parse(req);
-    const file = Array.isArray(files.file) ? files.file[0] : files.file;
-
-    if (!file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const fileContent = await fs.readFile(file.filepath);
-    const base64String = fileContent.toString('base64');
-    const dataUri = `data:${file.mimetype};base64,${base64String}`;
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    // Check file size (50MB limit)
+    if (file.size > 50 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large' }, { status: 400 });
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64String = buffer.toString('base64');
+    const dataUri = `data:${file.type};base64,${base64String}`;
 
     const uploadResponse = await cloudinary.uploader.upload(dataUri, {
       folder: `driveClone/${session.user.id}`,
@@ -58,24 +45,22 @@ export default async function handler(
       unique_filename: true,
     });
 
-    await fs.unlink(file.filepath);
-
-    return res.status(200).json({
+    return NextResponse.json({
       success: true,
       data: {
         url: uploadResponse.secure_url,
         publicId: uploadResponse.public_id,
-        originalName: file.originalFilename,
+        originalName: file.name,
         size: file.size,
-        type: file.mimetype,
+        type: file.type,
       }
     });
 
   } catch (error) {
     console.error('Upload error:', error);
-    return res.status(500).json({
+    return NextResponse.json({
       success: false,
       error: 'Failed to upload file'
-    });
+    }, { status: 500 });
   }
 }
