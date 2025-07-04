@@ -6,9 +6,9 @@ import { ObjectId } from 'mongodb';
 import { authOptions } from '@/app/lib/auth';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
@@ -192,7 +192,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const { id } = await params; // Add await here
+  const { id } = await params;
 
   if (!id || typeof id !== 'string') {
     return NextResponse.json(
