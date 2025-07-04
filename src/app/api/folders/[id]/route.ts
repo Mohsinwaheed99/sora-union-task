@@ -11,6 +11,89 @@ interface RouteParams {
   };
 }
 
+export async function GET(req: NextRequest, { params }: RouteParams) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await params;
+
+  if (!id || typeof id !== 'string') {
+    return NextResponse.json(
+      { success: false, error: 'Invalid folder ID' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const db = await getDatabase();
+    const foldersCollection = db.collection<Folder>('folders');
+
+    const folder = await foldersCollection.findOne({
+      _id: new ObjectId(id),
+      userId: session.user.id
+    });
+
+    if (!folder) {
+      return NextResponse.json(
+        { success: false, error: 'Folder not found' },
+        { status: 404 }
+      );
+    }
+
+    const path: Array<{ id: string; name: string }> = [];
+    let currentFolder = folder;
+
+    path.unshift({
+      id: currentFolder._id.toString(),
+      name: currentFolder.name
+    });
+
+    while (currentFolder.parentId) {
+      const parentFolder = await foldersCollection.findOne({
+        _id: new ObjectId(currentFolder.parentId),
+        userId: session.user.id
+      });
+
+      if (!parentFolder) {
+        break;
+      }
+
+      path.unshift({
+        id: parentFolder._id.toString(),
+        name: parentFolder.name
+      });
+
+      currentFolder = parentFolder;
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        folder: {
+          id: folder._id.toString(),
+          name: folder.name,
+          parentId: folder.parentId,
+          createdAt: folder.createdAt,
+          updatedAt: folder.updatedAt
+        },
+        path: path
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching folder path:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch folder path' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   const session = await getServerSession(authOptions);
 
@@ -21,7 +104,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const { id } = params;
+  const { id } = await params;
 
   if (!id || typeof id !== 'string') {
     return NextResponse.json(
@@ -109,7 +192,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const { id } = params;
+  const { id } = await params; // Add await here
 
   if (!id || typeof id !== 'string') {
     return NextResponse.json(

@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, JSX, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Upload, 
   Files, 
@@ -20,6 +21,7 @@ import {
   deleteFolder as deleteFolderService,
   renameFolder as renameFolderService,
   fetchFolders as fetchFoldersService,
+  fetchFolderPath as fetchFolderPathService, 
 } from '../../services/folder.service';
 
 import {
@@ -76,6 +78,9 @@ type EditingItemType = EditingItem | EditingFile | null;
 
 export default function Dashboard(): JSX.Element {
   const { data: session } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderPath, setFolderPath] = useState<PathItem[]>([]);
   const [folders, setFolders] = useState<FolderType[]>([]);
@@ -93,9 +98,39 @@ export default function Dashboard(): JSX.Element {
   const [isDeletingFolder, setIsDeletingFolder] = useState<boolean>(false);
   const [isRenamingFile, setIsRenamingFile] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [previewFile, setPreviewFile] = useState<FileType | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const updateURL = (folderId: string | null): void => {
+    const params = new URLSearchParams(searchParams);
+    if (folderId) {
+      params.set('folder', folderId);
+    } else {
+      params.delete('folder');
+    }
+    
+    const newURL = `${window.location.pathname}?${params.toString()}`;
+    router.replace(newURL);
+  };
+
+  // Initialize folder state from URL
+  useEffect(() => {
+    if (session?.user?.id && !isInitialized) {
+      const folderIdFromURL = searchParams.get('folder');
+      
+      if (folderIdFromURL) {
+        setCurrentFolderId(folderIdFromURL);
+        // You can build the folder path manually if needed, or start with empty path
+        setFolderPath([]);
+      } else {
+        setCurrentFolderId(null);
+        setFolderPath([]);
+      }
+      setIsInitialized(true);
+    }
+  }, [session?.user?.id, searchParams, isInitialized]);
 
   const fetchFolders = async (parentId: string | null = null): Promise<void> => {
     try {
@@ -204,6 +239,11 @@ export default function Dashboard(): JSX.Element {
       await deleteFolderService(folderId);
       setFolders(prev => prev.filter(folder => folder.id !== folderId));
       
+      // If we're deleting the current folder, navigate to parent
+      if (folderId === currentFolderId) {
+        navigateBack();
+      }
+      
     } catch (error) {
       console.error('Error deleting folder:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete folder');
@@ -248,15 +288,69 @@ export default function Dashboard(): JSX.Element {
   };
 
   useEffect(() => {
-    if (session?.user?.id) {
+    const initializeFolderState = async () => {
+      if (session?.user?.id && !isInitialized) {
+        const folderIdFromURL = searchParams.get('folder');
+        
+        if (folderIdFromURL) {
+          try {
+            setIsLoading(true);
+            const { folder, path } = await fetchFolderPathService(folderIdFromURL);
+            
+            setCurrentFolderId(folderIdFromURL);
+            setFolderPath(path); 
+          } catch (error) {
+            console.error('Error fetching folder path:', error);
+            setCurrentFolderId(null);
+            setFolderPath([]);
+            updateURL(null);
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          setCurrentFolderId(null);
+          setFolderPath([]);
+        }
+        setIsInitialized(true);
+      }
+    };
+
+    initializeFolderState();
+  }, [session?.user?.id, searchParams, isInitialized]);
+
+  useEffect(() => {
+    if (session?.user?.id && isInitialized) {
       fetchFolders(currentFolderId);
       fetchFiles(currentFolderId);
     }
-  }, [currentFolderId, session?.user?.id]);
+  }, [currentFolderId, session?.user?.id, isInitialized]);
 
-  const navigateToFolder = (folderId: string, folderName: string): void => {
-    setCurrentFolderId(folderId);
-    setFolderPath([...folderPath, { id: folderId, name: folderName }]);
+  const validateFolderAccess = async (folderId: string): Promise<boolean> => {
+    try {
+      await fetchFolderPathService(folderId);
+      return true;
+    } catch (error) {
+      console.error('Folder access validation failed:', error);
+      return false;
+    }
+  };
+
+  const navigateToFolder = async (folderId: string, folderName: string): Promise<void> => {
+    try {
+      const isValidFolder = await validateFolderAccess(folderId);
+      if (!isValidFolder) {
+        setError('Folder not found or access denied');
+        return;
+      }
+
+      const newPath = [...folderPath, { id: folderId, name: folderName }];
+      setCurrentFolderId(folderId);
+      setFolderPath(newPath);
+      updateURL(folderId);
+    } catch (error) {
+      console.error('Error navigating to folder:', error);
+      setError('Failed to navigate to folder');
+    }
   };
 
   const navigateBack = (): void => {
@@ -264,7 +358,39 @@ export default function Dashboard(): JSX.Element {
       const newPath = [...folderPath];
       newPath.pop();
       setFolderPath(newPath);
-      setCurrentFolderId(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
+      
+      const newFolderId = newPath.length > 0 ? newPath[newPath.length - 1].id : null;
+      setCurrentFolderId(newFolderId);
+      updateURL(newFolderId);
+    }
+  };
+
+  const navigateToHome = (): void => {
+    setCurrentFolderId(null);
+    setFolderPath([]);
+    updateURL(null);
+  };
+
+  const navigateToBreadcrumb = async (folderId: string | null, targetIndex: number): Promise<void> => {
+    try {
+      if (folderId === null) {
+        navigateToHome();
+        return;
+      }
+
+      const isValidFolder = await validateFolderAccess(folderId);
+      if (!isValidFolder) {
+        setError('Folder not found or access denied');
+        return;
+      }
+
+      const newPath = folderPath.slice(0, targetIndex + 1);
+      setCurrentFolderId(folderId);
+      setFolderPath(newPath);
+      updateURL(folderId);
+    } catch (error) {
+      console.error('Error navigating to breadcrumb:', error);
+      setError('Failed to navigate to folder');
     }
   };
 
@@ -317,7 +443,6 @@ export default function Dashboard(): JSX.Element {
 
   const handleMenuButtonClick = (e: React.MouseEvent, item: FolderType | FileType, type: 'folder' | 'file'): void => {
     e.stopPropagation();
-    console.log('item', item, 'type', type);
     const rect = e.currentTarget.getBoundingClientRect();
     setContextMenu({ 
       x: rect.right, 
@@ -341,7 +466,7 @@ export default function Dashboard(): JSX.Element {
     }
   };
 
-   const handleFileDownload = (file: FileType) => {
+  const handleFileDownload = (file: FileType) => {
     const link = document.createElement('a');
     link.href = file.url;
     link.download = file.originalName;
@@ -352,13 +477,13 @@ export default function Dashboard(): JSX.Element {
     setContextMenu(null); 
   };
 
-   const handleFilePreview = (file: FileType) => {
+  const handleFilePreview = (file: FileType) => {
     setPreviewFile(file);
     setIsPreviewOpen(true);
     setContextMenu(null);
   };
 
-   const handleClosePreview = () => {
+  const handleClosePreview = () => {
     setIsPreviewOpen(false);
     setPreviewFile(null);
   };
@@ -374,11 +499,21 @@ export default function Dashboard(): JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mr-3" />
+          <span className="text-gray-600">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-
         <div className="px-4 py-6 sm:px-0">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
@@ -403,14 +538,8 @@ export default function Dashboard(): JSX.Element {
 
           <Breadcrumbs
             folderPath={folderPath}
-            onNavigateHome={() => {
-              setCurrentFolderId(null);
-              setFolderPath([]);
-            }}
-            onNavigateToFolder={(folderId, newPath) => {
-              setCurrentFolderId(folderId);
-              setFolderPath(newPath);
-            }}
+            onNavigateHome={navigateToHome}
+            onNavigateToFolder={(folderId, index) => navigateToBreadcrumb(folderId, index)}
           />
 
           <div className="flex flex-wrap gap-4 mb-6">
