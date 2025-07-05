@@ -170,7 +170,6 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // If moving to a folder, verify the folder exists
     if (folderId) {
       const foldersCollection = db.collection('folders');
       const folder = await foldersCollection.findOne({
@@ -191,7 +190,6 @@ export async function PUT(req: NextRequest) {
       updatedAt: new Date()
     };
 
-    // Only update folderId if it's provided in the request
     if (folderId !== undefined) {
       updateData.folderId = folderId || null;
     }
@@ -245,7 +243,6 @@ export async function DELETE(req: NextRequest) {
     const db = await getDatabase();
     const filesCollection = db.collection<FileDocument>('files');
 
-    // Get file info before deletion (for cleanup purposes)
     const file = await filesCollection.findOne({
       _id: new ObjectId(id),
       userId: session.user.id
@@ -273,7 +270,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'File deleted successfully',
-      data: { cloudinaryPublicId: file.cloudinaryPublicId } // Return for client-side cleanup if needed
+      data: { cloudinaryPublicId: file.cloudinaryPublicId }
     });
   } catch (error) {
     console.error('Error deleting file:', error);

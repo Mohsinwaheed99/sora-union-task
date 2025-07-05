@@ -51,13 +51,13 @@ const Modal: React.FC<ModalProps> = ({
           height: modalHeight,
         }}
       >
-        <button
+        <span
           onClick={onClose}
           className="absolute top-3 right-3 p-1 hover:bg-gray-100 rounded-full focus:outline-none"
           aria-label="Close Modal"
         >
           <X className="w-5 h-5 text-gray-600" />
-        </button>
+        </span>
 
         {children}
       </div>

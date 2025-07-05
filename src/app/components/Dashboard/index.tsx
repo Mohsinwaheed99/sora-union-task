@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, JSX, useRef } from 'react';
+import React, { useState, useEffect, JSX } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -7,14 +7,13 @@ import {
   Files, 
   FolderPlus,
   ArrowLeft,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import CreateFolderModal from '../CreateFolder';
-import ContextMenuComponent from '../ContextMenu';
-import FileComponent from '../File';
-import FolderComponent from '../Folder';
 import { Header } from '../Header';
 import Breadcrumbs from '../BreadCrumb';
+import Modal from '../Modal';
 
 import {
   createFolder as createFolderService,
@@ -32,6 +31,9 @@ import {
 } from '../../services/file.service';
 import FilePreviewModal from '../FilePreview';
 import SearchBar from '../Searchbar';
+import Input from '../Input';
+import Button from '../Button';
+import Item from '../Items';
 
 interface FolderType {
   id: string;
@@ -40,6 +42,7 @@ interface FolderType {
   createdAt: string;
   updatedAt?: string;
   path?: string[];
+  fileCount?: number;
 }
 
 interface FileType {
@@ -60,21 +63,13 @@ interface PathItem {
   name: string;
 }
 
-interface ContextMenuData {
-  x: number;
-  y: number;
-  item: FolderType | FileType;
+interface EditingItem {
+  id: string;
+  name: string;
   type: 'folder' | 'file';
+  createdAt: string;
+  updatedAt?: string;
 }
-interface EditingItem extends FolderType {
-  type: 'folder';
-}
-
-interface EditingFile extends FileType {
-  type: 'file';
-}
-
-type EditingItemType = EditingItem | EditingFile | null;
 
 export default function Dashboard(): JSX.Element {
   const { data: session } = useSession();
@@ -90,18 +85,20 @@ export default function Dashboard(): JSX.Element {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCreatingFolder, setIsCreatingFolder] = useState<boolean>(false);
-  const [contextMenu, setContextMenu] = useState<ContextMenuData | null>(null);
-  const [editingItem, setEditingItem] = useState<EditingItemType>(null);
-  const [editName, setEditName] = useState<string>('');
+  const [editingItem, setEditingItem] = useState<EditingItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRenamingFolder, setIsRenamingFolder] = useState<boolean>(false);
   const [isDeletingFolder, setIsDeletingFolder] = useState<boolean>(false);
   const [isRenamingFile, setIsRenamingFile] = useState<boolean>(false);
+  const [isDeletingFile, setIsDeletingFile] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<string>('');
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const [previewFile, setPreviewFile] = useState<FileType | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
+  const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string; fileCount?: number } | null>(null);
+  const [deleteFolderError, setDeleteFolderError] = useState<string | null>(null);
 
   const updateURL = (folderId: string | null): void => {
     const params = new URLSearchParams(searchParams);
@@ -115,14 +112,12 @@ export default function Dashboard(): JSX.Element {
     router.replace(newURL);
   };
 
-  // Initialize folder state from URL
   useEffect(() => {
     if (session?.user?.id && !isInitialized) {
       const folderIdFromURL = searchParams.get('folder');
       
       if (folderIdFromURL) {
         setCurrentFolderId(folderIdFromURL);
-        // You can build the folder path manually if needed, or start with empty path
         setFolderPath([]);
       } else {
         setCurrentFolderId(null);
@@ -179,55 +174,73 @@ export default function Dashboard(): JSX.Element {
     }
   };
 
-  const updateFolder = async (folderId: string, newName: string): Promise<void> => {
+  const handleRename = async (id: string, newName: string, type: 'folder' | 'file'): Promise<void> => {
     if (!newName.trim()) return;
     
     try {
-      setIsRenamingFolder(true);
-      setError(null);
+      if (type === 'folder') {
+        setIsRenamingFolder(true);
+        setError(null);
+        
+        await renameFolderService(id, newName.trim());
+        
+        setFolders(prev => prev.map(folder => 
+          folder.id === id 
+            ? { ...folder, name: newName.trim(), updatedAt: new Date().toISOString() }
+            : folder
+        ));
+        
+        setFolderPath(prev => prev.map(pathItem =>
+          pathItem.id === id
+            ? { ...pathItem, name: newName.trim() }
+            : pathItem
+        ));
+        
+      } else {
+        setIsRenamingFile(true);
+        setError(null);
+        
+        await renameFileService(id, newName.trim());
+        
+        setFiles(prev => prev.map(file => 
+          file.id === id 
+            ? { ...file, name: newName.trim(), updatedAt: new Date().toISOString() }
+            : file
+        ));
+      }
       
-      const data = await renameFolderService(folderId, newName.trim());
-      
-      setFolders(prev => prev.map(folder => 
-        folder.id === folderId 
-          ? { ...folder, name: newName.trim(), updatedAt: new Date().toISOString() }
-          : folder
-      ));
-      
-      setFolderPath(prev => prev.map(pathItem =>
-        pathItem.id === folderId
-          ? { ...pathItem, name: newName.trim() }
-          : pathItem
-      ));
+      setEditingItem(null);
       
     } catch (error) {
-      console.error('Error updating folder:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update folder');
+      console.error(`Error updating ${type}:`, error);
+      setError(error instanceof Error ? error.message : `Failed to update ${type}`);
     } finally {
-      setIsRenamingFolder(false);
+      if (type === 'folder') {
+        setIsRenamingFolder(false);
+      } else {
+        setIsRenamingFile(false);
+      }
     }
   };
 
-  const updateFile = async (fileId: string, newName: string): Promise<void> => {
-    if (!newName.trim()) return;
-    
-    try {
-      setIsRenamingFile(true);
-      setError(null);
-      
-      const data = await renameFileService(fileId, newName.trim());
-      
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, name: newName.trim(), updatedAt: new Date().toISOString() }
-          : file
-      ));
-      
-    } catch (error) {
-      console.error('Error updating file:', error);
-      setError(error instanceof Error ? error.message : 'Failed to update file');
-    } finally {
-      setIsRenamingFile(false);
+  const handleDelete = async (id: string, type: 'folder' | 'file'): Promise<void> => {
+    if (type === 'folder') {
+      const folder = folders.find(f => f.id === id);
+      if (folder) {
+        if (folder.fileCount && folder.fileCount > 0) {
+          setFolderToDelete({ 
+            id: folder.id, 
+            name: folder.name, 
+            fileCount: folder.fileCount 
+          });
+          setIsDeleteConfirmOpen(true);
+          setDeleteFolderError(null);
+        } else {
+          await deleteFolder(folder.id);
+        }
+      }
+    } else {
+      await deleteFile(id);
     }
   };
 
@@ -235,18 +248,22 @@ export default function Dashboard(): JSX.Element {
     try {
       setIsDeletingFolder(true);
       setError(null);
+      setDeleteFolderError(null);
       
       await deleteFolderService(folderId);
       setFolders(prev => prev.filter(folder => folder.id !== folderId));
       
-      // If we're deleting the current folder, navigate to parent
       if (folderId === currentFolderId) {
         navigateBack();
       }
       
+      setIsDeleteConfirmOpen(false);
+      setFolderToDelete(null);
+      
     } catch (error) {
       console.error('Error deleting folder:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete folder');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete folder';
+      setDeleteFolderError(errorMessage);
     } finally {
       setIsDeletingFolder(false);
     }
@@ -254,6 +271,7 @@ export default function Dashboard(): JSX.Element {
 
   const deleteFile = async (fileId: string): Promise<void> => {
     try {
+      setIsDeletingFile(true);
       setError(null);
       
       await deleteFileService(fileId);
@@ -262,6 +280,8 @@ export default function Dashboard(): JSX.Element {
     } catch (error) {
       console.error('Error deleting file:', error);
       setError(error instanceof Error ? error.message : 'Failed to delete file');
+    } finally {
+      setIsDeletingFile(false);
     }
   };
 
@@ -335,7 +355,7 @@ export default function Dashboard(): JSX.Element {
     }
   };
 
-  const navigateToFolder = async (folderId: string, folderName: string): Promise<void> => {
+  const handleFolderDoubleClick = async (folderId: string, folderName: string): Promise<void> => {
     try {
       const isValidFolder = await validateFolderAccess(folderId);
       if (!isValidFolder) {
@@ -403,61 +423,16 @@ export default function Dashboard(): JSX.Element {
     event.target.value = '';
   };
 
-  const deleteItem = async (id: string, type: 'folder' | 'file'): Promise<void> => {
-    if (type === 'folder') {
-      await deleteFolder(id);
-    } else {
-      await deleteFile(id);
+  const handleConfirmDelete = async (): Promise<void> => {
+    if (folderToDelete) {
+      await deleteFolder(folderToDelete.id);
     }
-    setContextMenu(null);
   };
 
-  const startRename = (item: FolderType | FileType, type: 'folder' | 'file'): void => {
-    setEditingItem({ ...item, type } as EditingItemType);
-    setEditName(item.name);
-    setContextMenu(null);
-  };
-
-  const saveRename = async (): Promise<void> => {
-    if (!editName.trim() || !editingItem) return;
-    
-    if (editingItem.type === 'folder') {
-      await updateFolder(editingItem.id, editName);
-    } else {
-      await updateFile(editingItem.id, editName);
-    }
-    
-    setEditingItem(null);
-    setEditName('');
-  };
-
-  const cancelRename = (): void => {
-    setEditingItem(null);
-    setEditName('');
-  };
-
-  const handleContextMenu = (e: React.MouseEvent, item: FolderType | FileType, type: 'folder' | 'file'): void => {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, item, type });
-  };
-
-  const handleMenuButtonClick = (e: React.MouseEvent, item: FolderType | FileType, type: 'folder' | 'file'): void => {
-    e.stopPropagation();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setContextMenu({ 
-      x: rect.right, 
-      y: rect.top, 
-      item, 
-      type 
-    });
-  };
-
-  const handleRenameKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Enter') {
-      saveRename();
-    } else if (e.key === 'Escape') {
-      cancelRename();
-    }
+  const handleCancelDelete = (): void => {
+    setIsDeleteConfirmOpen(false);
+    setFolderToDelete(null);
+    setDeleteFolderError(null);
   };
 
   const handleFolderNameKeyPress = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -474,13 +449,11 @@ export default function Dashboard(): JSX.Element {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    setContextMenu(null); 
   };
 
   const handleFilePreview = (file: FileType) => {
     setPreviewFile(file);
     setIsPreviewOpen(true);
-    setContextMenu(null);
   };
 
   const handleClosePreview = () => {
@@ -488,16 +461,9 @@ export default function Dashboard(): JSX.Element {
     setPreviewFile(null);
   };
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        setContextMenu(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const navigateToFolder = async (folderId: string, folderName: string): Promise<void> => {
+    await handleFolderDoubleClick(folderId, folderName);
+  };
 
   if (!isInitialized) {
     return (
@@ -518,12 +484,14 @@ export default function Dashboard(): JSX.Element {
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
-              <button
+              <Button
                 onClick={() => setError(null)}
+                variant="outline"
+                size="sm"
                 className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
               >
                 Dismiss
-              </button>
+              </Button>
             </div>
           )}
 
@@ -543,41 +511,56 @@ export default function Dashboard(): JSX.Element {
           />
 
           <div className="flex flex-wrap gap-4 mb-6">
-            <button
+            <Button
               onClick={() => setIsCreateFolderOpen(true)}
+              variant="primary"
+              isLoading={isCreatingFolder}
               disabled={isCreatingFolder}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
             >
-              {isCreatingFolder ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <FolderPlus className="w-4 h-4 mr-2" />
-              )}
+              <FolderPlus className="w-4 h-4 mr-2" />
               New Folder
-            </button>
+            </Button>
             
-            <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors cursor-pointer">
-              <Upload className="w-4 h-4 mr-2" />
-              {isUploading ? 'Uploading...' : 'Upload Files'}
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
+           <label className="cursor-pointer">
+            <Button
+                variant="secondary"
                 disabled={isUploading}
-              />
+                isLoading={isUploading}
+                loadingText="Uploading..."
+                onClick={() => document.getElementById('upload-input')?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Files
+            </Button>
+
+            <Input
+              id="upload-input"
+              type="file"
+              multiple
+              required
+              onChange={handleFileUpload}
+              disabled={isUploading}
+              className="hidden"
+            />
             </label>
             
             {folderPath.length > 0 && (
-              <button
+              <Button
                 onClick={navigateBack}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                variant="outline"
+                size="md"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back
-              </button>
+              </Button>
             )}
           </div>
+
+          {uploadProgress && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-600">{uploadProgress}</p>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -587,34 +570,31 @@ export default function Dashboard(): JSX.Element {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {folders.map((folder) => (
-                <FolderComponent
+                <Item
                   key={folder.id}
-                  folder={folder}
-                  onDoubleClick={navigateToFolder}
-                  onContextMenu={handleContextMenu}
-                  onMenuButtonClick={handleMenuButtonClick}
-                  editingItem={editingItem as EditingItem | null}
-                  editName={editName}
-                  setEditName={setEditName}
-                  onSaveRename={saveRename}
-                  onRenameKeyPress={handleRenameKeyPress}
-                  isRenamingFolder={isRenamingFolder}
-                  isDeletingFolder={isDeletingFolder}
+                  item={folder}
+                  itemType="folder"
+                  onDoubleClick={handleFolderDoubleClick}
+                  onDelete={handleDelete}
+                  onRename={handleRename}
+                  editingItem={editingItem}
+                  isRenaming={isRenamingFolder}
+                  isDeleting={isDeletingFolder}
                 />
               ))}
 
               {files.map((file) => (
-                <FileComponent
+                <Item
                   key={file.id}
-                  file={file}
-                  onContextMenu={handleContextMenu}
-                  onMenuButtonClick={handleMenuButtonClick}
-                  editingItem={editingItem as EditingFile | null}
-                  editName={editName}
-                  setEditName={setEditName}
-                  onSaveRename={saveRename}
-                  onRenameKeyPress={handleRenameKeyPress}
-                  isRenamingFile={isRenamingFile}
+                  item={file}
+                  itemType="file"
+                  onFilePreview={handleFilePreview}
+                  onFileDownload={handleFileDownload}
+                  onDelete={handleDelete}
+                  onRename={handleRename}
+                  editingItem={editingItem}
+                  isRenaming={isRenamingFile}
+                  isDeleting={isDeletingFile}
                 />
               ))}
             </div>
@@ -640,25 +620,71 @@ export default function Dashboard(): JSX.Element {
         isCreatingFolder={isCreatingFolder}
       />
 
-      {contextMenu && (
-        <ContextMenuComponent
-          contextMenu={contextMenu}
-          contextMenuRef={contextMenuRef}
-          onStartRename={startRename}
-          onFilePreview={handleFilePreview}
-          onFileDownload={handleFileDownload}
-          onDeleteItem={deleteItem}
-          isRenamingFolder={isRenamingFolder}
-          isDeletingFolder={isDeletingFolder}
-        />
-      )}
-
       <FilePreviewModal
         isOpen={isPreviewOpen}
         onClose={handleClosePreview}
         file={previewFile}
         onDownload={handleFileDownload}
       />
+
+      <Modal
+        isOpen={isDeleteConfirmOpen}
+        onClose={handleCancelDelete}
+        modalWidth={480}
+        className="max-w-md"
+      >
+        <div className="pt-4">
+          <div className="flex items-center mb-4">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-lg font-medium text-gray-900">
+                Delete Folder
+              </h3>
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <p className="text-sm text-gray-700 mb-3">
+              Are you sure you want to delete the folder "{folderToDelete?.name}"?
+            </p>
+            {folderToDelete?.fileCount && folderToDelete.fileCount > 0 && (
+              <p className="text-sm text-orange-600 font-medium mb-3">
+                This folder contains {folderToDelete.fileCount} file{folderToDelete.fileCount !== 1 ? 's' : ''}.
+              </p>
+            )}
+            <p className="text-sm text-red-600 font-medium">
+              This action cannot be undone. All files and subfolders within this folder will be permanently deleted.
+            </p>
+          </div>
+
+          {deleteFolderError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{deleteFolderError}</p>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3">
+            <Button
+              onClick={handleCancelDelete}
+              variant="outline"
+              disabled={isDeletingFolder}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              variant="primary"
+              isLoading={isDeletingFolder}
+              disabled={isDeletingFolder}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+            >
+              {isDeletingFolder ? 'Deleting...' : 'Delete Folder'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

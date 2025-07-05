@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Download, FileText, Image, Video, Music, Archive, File, Eye, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import Modal from '../Modal';
+import Button from '../Button';
 
 interface FileType {
   id: string;
@@ -174,7 +175,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   const renderPreview = () => {
     const fileType = file.type.toLowerCase();
 
-    // Image preview
     if (fileType.startsWith('image/')) {
       return (
         <div className="flex items-center justify-center bg-gray-50 rounded-lg p-4 mb-4">
@@ -188,7 +188,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       );
     }
 
-    // Video preview
     if (fileType.startsWith('video/')) {
       return (
         <div className="flex items-center justify-center bg-gray-50 rounded-lg p-4 mb-4">
@@ -203,7 +202,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       );
     }
 
-    // Audio preview
     if (fileType.startsWith('audio/')) {
       return (
         <div className="flex items-center justify-center bg-gray-50 rounded-lg p-4 mb-4">
@@ -218,11 +216,9 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       );
     }
 
-    // Enhanced PDF preview with canvas rendering
     if (fileType.includes('pdf') && isClient) {
       return (
         <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          {/* PDF Controls */}
           <div className="flex items-center justify-between bg-white rounded-lg p-3 mb-4 shadow-sm">
             <div className="flex items-center space-x-4">
               <span className="text-sm font-medium text-gray-700">
@@ -231,69 +227,79 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               
               {numPages > 0 && (
                 <div className="flex items-center space-x-2">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={goToPrevPage}
                     disabled={pageNumber <= 1}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                  </button>
+                  </Button>
                   
                   <span className="text-sm text-gray-600">
                     {pageNumber} / {numPages}
                   </span>
                   
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={goToNextPage}
                     disabled={pageNumber >= numPages}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1"
                   >
                     <ChevronRight className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {numPages > 0 && (
                 <div className="flex items-center space-x-2">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={zoomOut}
                     disabled={scale <= 0.5}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1"
                   >
                     <ZoomOut className="w-4 h-4" />
-                  </button>
+                  </Button>
                   
                   <span className="text-sm text-gray-600">
                     {Math.round(scale * 100)}%
                   </span>
                   
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={zoomIn}
                     disabled={scale >= 3}
-                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-1"
                   >
                     <ZoomIn className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
 
             <div className="flex items-center space-x-2">
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={() => window.open(file.url, '_blank')}
-                className="flex items-center space-x-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
               >
-                <Eye className="w-4 h-4" />
-                <span>Open</span>
-              </button>
+                <Eye className="w-4 h-4 mr-1" />
+                Open
+              </Button>
               {onDownload && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => onDownload(file)}
-                  className="flex items-center space-x-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
+                  <Download className="w-4 h-4 mr-1" />
+                  Download
+                </Button>
               )}
             </div>
           </div>
@@ -313,21 +319,21 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 <h3 className="text-lg font-medium text-gray-900 mb-2">PDF Preview Error</h3>
                 <p className="text-sm text-red-600 mb-4">{pdfError}</p>
                 <div className="flex space-x-3">
-                  <button
+                  <Button
+                    variant="primary"
                     onClick={() => window.open(file.url, '_blank')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <Eye className="w-4 h-4" />
-                    <span>Open PDF</span>
-                  </button>
+                    <Eye className="w-4 h-4 mr-2" />
+                    Open PDF
+                  </Button>
                   {onDownload && (
-                    <button
+                    <Button
+                      variant="secondary"
                       onClick={() => onDownload(file)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
                     >
-                      <Download className="w-4 h-4" />
-                      <span>Download</span>
-                    </button>
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
                   )}
                 </div>
               </div>
@@ -340,7 +346,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 />
               </div>
             ) : (
-              // Fallback iframe for cases where canvas rendering fails
               <iframe
                 src={`/api/proxy-pdf?url=${encodeURIComponent(file.url)}`}
                 className="w-full h-96 border-0 rounded-lg shadow-sm"
@@ -353,7 +358,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       );
     }
 
-    // Fallback for PDF when not on client side
     if (fileType.includes('pdf') && !isClient) {
       return (
         <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-8 mb-4">
@@ -364,29 +368,28 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             PDF preview is loading...
           </p>
           <div className="flex space-x-3">
-            <button
+            <Button
+              variant="primary"
               onClick={() => window.open(file.url, '_blank')}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Eye className="w-4 h-4" />
-              <span>Open PDF</span>
-            </button>
+              <Eye className="w-4 h-4 mr-2" />
+              Open PDF
+            </Button>
             {onDownload && (
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => onDownload(file)}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
-                <Download className="w-4 h-4" />
-                <span>Download</span>
-              </button>
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
             )}
           </div>
         </div>
       );
     }
 
-    // Text preview for small text files
-    if (fileType.startsWith('text/') && file.size < 1024 * 1024) { // Less than 1MB
+    if (fileType.startsWith('text/') && file.size < 1024 * 1024) {
       return (
         <div className="bg-gray-50 rounded-lg p-4 mb-4">
           <iframe
@@ -398,7 +401,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       );
     }
 
-    // Default preview for unsupported file types
     return (
       <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-8 mb-4">
         <div className="text-gray-400 mb-2">
@@ -436,13 +438,13 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             </div>
           </div>
           {onDownload && !file.type.includes('pdf') && (
-            <button
+            <Button
+              variant="primary"
               onClick={() => onDownload(file)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              <Download className="w-4 h-4" />
-              <span>Download</span>
-            </button>
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </Button>
           )}
         </div>
 

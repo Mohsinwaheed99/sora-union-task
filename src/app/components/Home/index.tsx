@@ -1,10 +1,10 @@
 'use client';
 import React, { useState } from 'react';
 import { Upload } from 'lucide-react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import LoginForm from '../LoginForm';
 import SignupForm from '../SignupForm';
+import { login, signup } from '@/app/services/auth.service';
 
 const Home = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -12,69 +12,56 @@ const Home = () => {
   const [error, setError] = useState('');
   const router = useRouter();
 
-  const handleLoginSubmit = async (data: { email: string; password: string }) => {
+ const handleLoginSubmit = async (data: { email: string; password: string }) => {
     setIsLoading(true);
     setError('');
-    
-    try {
-      const result = await signIn('credentials', {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      });
 
-      if (result?.error) {
+    try {
+      const result = await login(data);
+
+      if (!result.success) {
         setError('Invalid email or password');
       } else {
         router.push('/dashboard');
       }
-    } catch (error) {
+    } catch (err) {
       setError('An error occurred during login');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignupSubmit = async (data: { name: string; email: string; password: string; confirmPassword: string }) => {
+  const handleSignupSubmit = async (data: {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+  }) => {
     setIsLoading(true);
     setError('');
-    
+
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await signup(data);
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.error || 'Signup failed');
-        return;
-      }
-
-      const loginResult = await signIn('credentials', {
+      const loginResult = await login({
         email: data.email,
         password: data.password,
-        redirect: false,
       });
 
-      if (loginResult?.error) {
+      if (!loginResult.success) {
         setError('Account created but login failed. Please try logging in manually.');
       } else {
         router.push('/dashboard');
       }
-    } catch (error) {
-      setError('An error occurred during signup');
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Signup failed');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-pink-100 to-yellow-100 flex items-center justify-center p-4">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
@@ -95,32 +82,32 @@ const Home = () => {
 
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 transition-all duration-300">
           <div className="flex bg-gray-100 rounded-xl p-1 mb-8">
-            <button
+            <span
               onClick={() => {
                 setIsLogin(true);
                 setError('');
               }}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`flex-1 py-2 px-4 text-center rounded-lg cursor-pointer text-sm font-medium transition-all duration-200 ${
                 isLogin 
                   ? 'bg-white text-gray-900 shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               Sign In
-            </button>
-            <button
+            </span>
+            <span
               onClick={() => {
                 setIsLogin(false);
                 setError('');
               }}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+              className={`flex-1 py-2 px-4 rounded-lg text-center cursor-pointer text-sm font-medium transition-all duration-200 ${
                 !isLogin 
                   ? 'bg-white text-gray-900 shadow-sm' 
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               Sign Up
-            </button>
+            </span>
           </div>
 
           {error && (
@@ -138,15 +125,15 @@ const Home = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button
+              <span
                 onClick={() => {
                   setIsLogin(!isLogin);
                   setError('');
                 }}
-                className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
+                className="font-medium text-blue-600 hover:text-blue-500 transition-colors cursor-pointer"
               >
                 {isLogin ? 'Sign up' : 'Sign in'}
-              </button>
+              </span>
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
-// components/SearchBar.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, File, Folder, ArrowRight, Loader2 } from 'lucide-react';
+import Input from '../Input';
 
 interface SearchResult {
   folders: Array<{
@@ -160,23 +160,23 @@ const SearchBar: React.FC<SearchBarProps> = ({
             <Search className="h-5 w-5 text-gray-400" />
           )}
         </div>
-        <input
+         <Input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => query.trim() && setIsOpen(true)}
           placeholder="Search files and folders..."
-          className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          className='pl-10 pr-10 py-2'
         />
         {query && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <button
+            <span
               onClick={handleClear}
               className="text-gray-400 hover:text-gray-600 focus:outline-none"
             >
               <X className="h-5 w-5" />
-            </button>
+            </span>
           </div>
         )}
       </div>
@@ -208,7 +208,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     Folders ({results.folders.length})
                   </div>
                   {results.folders.map((folder) => (
-                    <button
+                    <span
                       key={folder.id}
                       onClick={() => handleFolderClick(folder)}
                       className="w-full flex items-center px-3 py-2 text-sm text-left hover:bg-gray-50 rounded-md group"
@@ -223,7 +223,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                       </div>
                       <ArrowRight className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
+                    </span>
                   ))}
                 </div>
               )}
@@ -245,18 +245,18 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
+                        <span
                           onClick={() => handleFileClick(file)}
-                          className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                          className="text-blue-600 hover:text-blue-800 cursor-pointer text-xs font-medium"
                         >
                           Preview
-                        </button>
-                        <button
+                        </span>
+                        <span
                           onClick={() => onFileDownload(file)}
-                          className="text-green-600 hover:text-green-800 text-xs font-medium"
+                          className="text-green-600 hover:text-green-800 cursor-pointer text-xs font-medium"
                         >
                           Download
-                        </button>
+                        </span>
                       </div>
                     </div>
                   ))}

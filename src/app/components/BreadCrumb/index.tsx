@@ -1,7 +1,6 @@
-// Update your Breadcrumbs component (BreadCrumb.tsx or similar)
-
 import React from 'react';
 import { ChevronRight, Home } from 'lucide-react';
+import Button from '../Button';
 
 interface PathItem {
   id: string;
@@ -21,31 +20,38 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({
 }) => {
   return (
     <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
-      <button
+      <Button
+        type="button"
+        variant="outline"
+        size="md"
+        className="flex items-center hover:text-blue-600 transition-colors cursor-pointer"
         onClick={onNavigateHome}
-        className="flex items-center hover:text-blue-600 transition-colors"
       >
         <Home className="w-4 h-4 mr-1" />
         Home
-      </button>
-      
+      </Button>
+
       {folderPath.map((pathItem, index) => {
         const isLast = index === folderPath.length - 1;
+
         return (
           <React.Fragment key={pathItem.id}>
             <ChevronRight className="w-4 h-4 text-gray-400" />
-            <button
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => onNavigateToFolder(pathItem.id, index)}
-              className={`transition-colors truncate max-w-32 ${
-                isLast 
-                  ? 'text-gray-900 font-medium cursor-default' 
-                  : 'hover:text-blue-600'
+              disabled={isLast}
+              className={`truncate max-w-32 px-1 py-0 h-auto text-sm ${
+                isLast
+                  ? 'text-gray-900 font-medium cursor-default'
+                  : 'text-gray-500 hover:text-blue-600'
               }`}
-              title={pathItem.name}
-              disabled={isLast} // Disable click on current folder
             >
               {pathItem.name}
-            </button>
+            </Button>
           </React.Fragment>
         );
       })}

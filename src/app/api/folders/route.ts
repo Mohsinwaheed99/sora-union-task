@@ -22,23 +22,52 @@ export async function GET(req: NextRequest) {
     const db = await getDatabase();
     const foldersCollection = db.collection<Folder>('folders');
     
-    const folders = await foldersCollection
-      .find({
-        userId: session.user.id,
-        parentId: parentId === 'null' || !parentId ? null : parentId
-      })
-      .sort({ createdAt: -1 })
-      .toArray();
-
-    const foldersWithId = folders.map(folder => ({
-      ...folder,
-      id: folder._id?.toString(),
-      _id: undefined
-    }));
+    const foldersWithFileCount = await foldersCollection.aggregate([
+      {
+        $match: {
+          userId: session.user.id,
+          parentId: parentId === 'null' || !parentId ? null : parentId
+        }
+      },
+      {
+        $lookup: {
+          from: 'files',
+          let: { folderId: { $toString: '$_id' }, userId: '$userId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$folderId', '$$folderId'] },
+                    { $eq: ['$userId', '$$userId'] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'files'
+        }
+      },
+      {
+        $addFields: {
+          id: { $toString: '$_id' },
+          fileCount: { $size: '$files' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          files: 0
+        }
+      },
+      {
+        $sort: { createdAt: -1 }
+      }
+    ]).toArray();
 
     return NextResponse.json({
       success: true,
-      data: foldersWithId
+      data: foldersWithFileCount
     });
   } catch (error) {
     console.error('Error fetching folders:', error);
@@ -248,24 +277,24 @@ export async function DELETE(req: NextRequest) {
 
     const db = await getDatabase();
     const foldersCollection = db.collection<Folder>('folders');
-    const filesCollection = db.collection('files');
+    // const filesCollection = db.collection('files');
 
-    const hasChildren = await foldersCollection.findOne({
-      parentId: id,
-      userId: session.user.id
-    });
+    // const hasChildren = await foldersCollection.findOne({
+    //   parentId: id,
+    //   userId: session.user.id
+    // });
 
-    const hasFiles = await filesCollection.findOne({
-      folderId: id,
-      userId: session.user.id
-    });
+    // const hasFiles = await filesCollection.findOne({
+    //   folderId: id,
+    //   userId: session.user.id
+    // });
 
-    if (hasChildren || hasFiles) {
-      return NextResponse.json(
-        { success: false, error: 'Cannot delete folder that contains files or subfolders' },
-        { status: 400 }
-      );
-    }
+    // if (hasChildren || hasFiles) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Cannot delete folder that contains files or subfolders' },
+    //     { status: 400 }
+    //   );
+    // }
 
     const result = await foldersCollection.deleteOne({
       _id: new ObjectId(id),

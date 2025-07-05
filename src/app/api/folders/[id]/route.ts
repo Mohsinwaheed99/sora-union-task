@@ -184,7 +184,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   const session = await getServerSession(authOptions);
-
+  console.log('in the detail');
   if (!session?.user?.id) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
