@@ -2,9 +2,8 @@ export const getBaseUrl = () => {
   if (process.env.NODE_ENV === 'development') {
     return 'http://localhost:3000';
   }
-  return process.env.NEXTAUTH_URL || 'https://sora-union-task-btn1.vercel.app';
+  return process.env.NEXTAUTH_URL || 'https://sora-union-task.vercel.app';
 };
-
 
 export const getMimeTypeFromExtension = (filename: string): string => {
   const extension = filename.toLowerCase().split('.').pop();
