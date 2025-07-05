@@ -11,7 +11,6 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  console.log('router',router);
 
   const handleLoginSubmit = async (data: { email: string; password: string }) => {
     setIsLoading(true);
@@ -23,12 +22,28 @@ const Home = () => {
       if (!result.success) {
         setError('Invalid email or password');
       } else {
-        router.refresh()
-        setTimeout(() => {
-          router.replace('/dashboard');
-        }, 100);
+        // Multiple redirect approaches for mobile compatibility
+        try {
+          // Method 1: Standard Next.js router push
+          router.push('/dashboard');
+          
+          // Method 2: Fallback for mobile browsers
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/dashboard';
+            }
+          }, 100);
+          
+        } catch (routerError) {
+          // Method 3: Direct browser navigation as last resort
+          console.error('Router push failed:', routerError);
+          if (typeof window !== 'undefined') {
+            window.location.href = '/dashboard';
+          }
+        }
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred during login');
     } finally {
       setIsLoading(false);
@@ -55,12 +70,25 @@ const Home = () => {
       if (!loginResult.success) {
         setError('Account created but login failed. Please try logging in manually.');
       } else {
-        router.refresh()
-        setTimeout(() => {
-          router.replace('/dashboard');
-        }, 100);
+        // Same mobile-friendly redirect approach
+        try {
+          router.push('/dashboard');
+          
+          setTimeout(() => {
+            if (typeof window !== 'undefined') {
+              window.location.href = '/dashboard';
+            }
+          }, 100);
+          
+        } catch (routerError) {
+          console.error('Router push failed:', routerError);
+          if (typeof window !== 'undefined') {
+            window.location.href = '/dashboard';
+          }
+        }
       }
     } catch (err: any) {
+      console.error('Signup error:', err);
       setError(err?.response?.data?.error || 'Signup failed');
     } finally {
       setIsLoading(false);
