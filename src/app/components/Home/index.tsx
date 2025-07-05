@@ -23,7 +23,10 @@ const Home = () => {
       if (!result.success) {
         setError('Invalid email or password');
       } else {
-        router.replace('/dashboard');
+        router.refresh()
+        setTimeout(() => {
+          router.replace('/dashboard');
+        }, 100);
       }
     } catch (err) {
       setError('An error occurred during login');
@@ -52,7 +55,10 @@ const Home = () => {
       if (!loginResult.success) {
         setError('Account created but login failed. Please try logging in manually.');
       } else {
-        router.replace('/dashboard');
+        router.refresh()
+        setTimeout(() => {
+          router.replace('/dashboard');
+        }, 100);
       }
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Signup failed');
