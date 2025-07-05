@@ -3,7 +3,7 @@ import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
 const client = new MongoClient(process.env.MONGO_URI!);
-console.log('process.env.MONGO_URI',process.env.MONGO_URI);
+
 export async function POST(request: NextRequest) {
   try {
     const { name, email, password, confirmPassword } = await request.json();

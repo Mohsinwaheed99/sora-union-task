@@ -304,7 +304,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
             </div>
           </div>
 
-          {/* PDF Document */}
           <div className="flex justify-center bg-white rounded-lg p-4 min-h-[400px] overflow-auto">
             {pdfLoading ? (
               <div className="flex flex-col items-center justify-center text-center p-8">
@@ -422,7 +421,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
       className="max-w-5xl max-h-[95vh] overflow-y-auto"
     >
       <div className="space-y-4">
-        {/* Header */}
         <div className="flex items-center justify-between border-b pb-3">
           <div className="flex items-center space-x-3">
             <div className="text-gray-600">
@@ -448,12 +446,10 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
           )}
         </div>
 
-        {/* Preview */}
         <div className="min-h-[400px]">
           {renderPreview()}
         </div>
 
-        {/* File Details */}
         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
           <h3 className="font-medium text-gray-900">File Details</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">

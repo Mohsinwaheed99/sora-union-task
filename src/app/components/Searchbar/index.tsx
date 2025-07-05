@@ -2,33 +2,37 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, File, Folder, ArrowRight, Loader2 } from 'lucide-react';
 import Input from '../Input';
 
+// Use the same interface as Dashboard
+interface FileType {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  folderId: string | null;
+  url: string;
+  createdAt: string;
+  originalName: string;
+  cloudinaryPublicId?: string;
+  updatedAt?: string;
+}
+
+interface FolderType {
+  id: string;
+  name: string;
+  parentId: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 interface SearchResult {
-  folders: Array<{
-    id: string;
-    name: string;
-    parentId: string | null;
-    createdAt: string;
-    updatedAt?: string;
-    type: 'folder';
-  }>;
-  files: Array<{
-    id: string;
-    name: string;
-    originalName: string;
-    size: number;
-    folderId: string | null;
-    url: string;
-    createdAt: string;
-    updatedAt?: string;
-    cloudinaryPublicId?: string;
-    type: 'file';
-  }>;
+  folders: Array<FolderType & { type: 'folder' }>;
+  files: Array<FileType & { type: 'file' }>;
 }
 
 interface SearchBarProps {
   onNavigateToFolder: (folderId: string, folderName: string) => void;
-  onFilePreview: (file: any) => void;
-  onFileDownload: (file: any) => void;
+  onFilePreview: (file: FileType) => void;
+  onFileDownload: (file: FileType) => void;
   className?: string;
 }
 
@@ -121,15 +125,75 @@ const SearchBar: React.FC<SearchBarProps> = ({
     inputRef.current?.focus();
   };
 
-  const handleFolderClick = (folder: any) => {
+  const handleFolderClick = (folder: FolderType & { type: 'folder' }) => {
     onNavigateToFolder(folder.id, folder.name);
     setIsOpen(false);
     setQuery('');
   };
 
-  const handleFileClick = (file: any) => {
-    onFilePreview(file);
+  const getMimeTypeFromExtension = (filename: string): string => {
+    const extension = filename.toLowerCase().split('.').pop();
+    const mimeTypes: { [key: string]: string } = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp',
+      'svg': 'image/svg+xml',
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'txt': 'text/plain',
+      'mp4': 'video/mp4',
+      'avi': 'video/x-msvideo',
+      'mov': 'video/quicktime',
+      'mp3': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'zip': 'application/zip',
+      'rar': 'application/vnd.rar',
+    };
+    
+    return mimeTypes[extension || ''] || 'application/octet-stream';
+  };
+
+  const handleFileClick = (file: FileType & { type: 'file' }) => {
+    const fileForPreview: FileType = {
+      id: file.id,
+      name: file.name,
+      type: file.type === 'file' ? getMimeTypeFromExtension(file.originalName) : file.type,
+      size: file.size,
+      folderId: file.folderId,
+      url: file.url,
+      createdAt: file.createdAt,
+      originalName: file.originalName,
+      cloudinaryPublicId: file.cloudinaryPublicId,
+      updatedAt: file.updatedAt
+    };
+    
+    onFilePreview(fileForPreview);
     setIsOpen(false);
+  };
+
+  const handleFileDownload = (file: FileType & { type: 'file' }) => {
+    const fileForDownload: FileType = {
+      id: file.id,
+      name: file.name,
+      type: file.type === 'file' ? getMimeTypeFromExtension(file.originalName) : file.type,
+      size: file.size,
+      folderId: file.folderId,
+      url: file.url,
+      createdAt: file.createdAt,
+      originalName: file.originalName,
+      cloudinaryPublicId: file.cloudinaryPublicId,
+      updatedAt: file.updatedAt
+    };
+    
+    onFileDownload(fileForDownload);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -173,7 +237,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <span
               onClick={handleClear}
-              className="text-gray-400 hover:text-gray-600 focus:outline-none"
+              className="text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
             >
               <X className="h-5 w-5" />
             </span>
@@ -208,7 +272,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     Folders ({results.folders.length})
                   </div>
                   {results.folders.map((folder) => (
-                    <span
+                    <button
                       key={folder.id}
                       onClick={() => handleFolderClick(folder)}
                       className="w-full flex items-center px-3 py-2 text-sm text-left hover:bg-gray-50 rounded-md group"
@@ -223,7 +287,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                       </div>
                       <ArrowRight className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </span>
+                    </button>
                   ))}
                 </div>
               )}
@@ -245,18 +309,18 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span
+                        <button
                           onClick={() => handleFileClick(file)}
                           className="text-blue-600 hover:text-blue-800 cursor-pointer text-xs font-medium"
                         >
                           Preview
-                        </span>
-                        <span
-                          onClick={() => onFileDownload(file)}
+                        </button>
+                        <button
+                          onClick={() => handleFileDownload(file)}
                           className="text-green-600 hover:text-green-800 cursor-pointer text-xs font-medium"
                         >
                           Download
-                        </span>
+                        </button>
                       </div>
                     </div>
                   ))}

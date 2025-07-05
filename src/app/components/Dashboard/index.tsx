@@ -57,7 +57,6 @@ interface FileType {
   cloudinaryPublicId?: string;
   updatedAt?: string;
 }
-
 interface PathItem {
   id: string;
   name: string;
@@ -95,7 +94,6 @@ export default function Dashboard(): JSX.Element {
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [previewFile, setPreviewFile] = useState<FileType | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
   const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string; fileCount?: number } | null>(null);
   const [deleteFolderError, setDeleteFolderError] = useState<string | null>(null);
@@ -452,6 +450,7 @@ export default function Dashboard(): JSX.Element {
   };
 
   const handleFilePreview = (file: FileType) => {
+    console.log('file',file);
     setPreviewFile(file);
     setIsPreviewOpen(true);
   };
