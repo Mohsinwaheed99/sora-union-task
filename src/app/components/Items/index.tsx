@@ -16,6 +16,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import Input from '../Input';
+import { formatFileSize } from '@/app/utils/functions';
 
 interface BaseItem {
   id: string;
@@ -87,14 +88,6 @@ const Item: React.FC<ItemComponentProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
 
   const getFileIcon = (type: string): React.JSX.Element => {
     if (type.startsWith('image/')) return <Image className="w-5 h-5 text-green-600" />;

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Download, FileText, Image, Video, Music, Archive, File, Eye, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import Modal from '../Modal';
 import Button from '../Button';
+import { formatDate, formatFileSize } from '@/app/utils/functions';
 
 interface FileType {
   id: string;
@@ -127,24 +128,6 @@ const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
     } catch (error) {
       console.error('Error rendering PDF page:', error);
     }
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const getFileIcon = (type: string) => {

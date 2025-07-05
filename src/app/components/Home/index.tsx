@@ -22,28 +22,9 @@ const Home = () => {
       if (!result.success) {
         setError('Invalid email or password');
       } else {
-        // Multiple redirect approaches for mobile compatibility
-        try {
-          // Method 1: Standard Next.js router push
-          router.push('/dashboard');
-          
-          // Method 2: Fallback for mobile browsers
-          setTimeout(() => {
-            if (typeof window !== 'undefined') {
-              window.location.href = '/dashboard';
-            }
-          }, 100);
-          
-        } catch (routerError) {
-          // Method 3: Direct browser navigation as last resort
-          console.error('Router push failed:', routerError);
-          if (typeof window !== 'undefined') {
-            window.location.href = '/dashboard';
-          }
-        }
+        router.push('/dashboard');
       }
     } catch (err) {
-      console.error('Login error:', err);
       setError('An error occurred during login');
     } finally {
       setIsLoading(false);
@@ -70,25 +51,9 @@ const Home = () => {
       if (!loginResult.success) {
         setError('Account created but login failed. Please try logging in manually.');
       } else {
-        // Same mobile-friendly redirect approach
-        try {
-          router.push('/dashboard');
-          
-          setTimeout(() => {
-            if (typeof window !== 'undefined') {
-              window.location.href = '/dashboard';
-            }
-          }, 100);
-          
-        } catch (routerError) {
-          console.error('Router push failed:', routerError);
-          if (typeof window !== 'undefined') {
-            window.location.href = '/dashboard';
-          }
-        }
+        router.push('/dashboard');
       }
     } catch (err: any) {
-      console.error('Signup error:', err);
       setError(err?.response?.data?.error || 'Signup failed');
     } finally {
       setIsLoading(false);

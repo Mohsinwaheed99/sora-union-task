@@ -4,12 +4,13 @@ import { LogOut, Upload, User } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import React from 'react';
 import Button from '../Button';
+import { getBaseUrl } from '@/app/utils/functions';
 
 export const Header = () => {
   const { data: session } = useSession();
 
   const handleSignOut = async (): Promise<void> => {
-    await signOut({ callbackUrl: '/' });
+    await signOut({ callbackUrl: getBaseUrl() + '/', });
   };
 
   return (

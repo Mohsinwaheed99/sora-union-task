@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, File, Folder, ArrowRight, Loader2 } from 'lucide-react';
 import Input from '../Input';
+import { formatDate, formatFileSize, getMimeTypeFromExtension } from '@/app/utils/functions';
+import { searchFiles } from '@/app/services/search';
 
-// Use the same interface as Dashboard
 interface FileType {
   id: string;
   name: string;
@@ -50,27 +51,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const searchFiles = async (searchQuery: string): Promise<SearchResult> => {
-    if (!searchQuery.trim()) {
-      return { folders: [], files: [] };
-    }
-
-    const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Search failed');
-    }
-
-    const data = await response.json();
-    return data.data;
-  };
-
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults({ folders: [], files: [] });
@@ -83,7 +63,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     try {
       const searchResults = await searchFiles(searchQuery);
-      setResults(searchResults);
+      
+      const transformedResults: SearchResult = {
+        folders: searchResults.folders.map(folder => ({ ...folder, type: 'folder' as const })),
+        files: searchResults.files.map(file => ({ ...file, type: 'file' as const }))
+      };
+      
+      setResults(transformedResults);
       setIsOpen(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -131,36 +117,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
     setQuery('');
   };
 
-  const getMimeTypeFromExtension = (filename: string): string => {
-    const extension = filename.toLowerCase().split('.').pop();
-    const mimeTypes: { [key: string]: string } = {
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif',
-      'webp': 'image/webp',
-      'bmp': 'image/bmp',
-      'svg': 'image/svg+xml',
-      'pdf': 'application/pdf',
-      'doc': 'application/msword',
-      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'xls': 'application/vnd.ms-excel',
-      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'ppt': 'application/vnd.ms-powerpoint',
-      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'txt': 'text/plain',
-      'mp4': 'video/mp4',
-      'avi': 'video/x-msvideo',
-      'mov': 'video/quicktime',
-      'mp3': 'audio/mpeg',
-      'wav': 'audio/wav',
-      'zip': 'application/zip',
-      'rar': 'application/vnd.rar',
-    };
-    
-    return mimeTypes[extension || ''] || 'application/octet-stream';
-  };
-
   const handleFileClick = (file: FileType & { type: 'file' }) => {
     const fileForPreview: FileType = {
       id: file.id,
@@ -194,22 +150,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
     };
     
     onFileDownload(fileForDownload);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
   };
 
   const totalResults = results.folders.length + results.files.length;

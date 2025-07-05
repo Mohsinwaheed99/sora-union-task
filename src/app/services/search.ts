@@ -1,3 +1,5 @@
+import axios from './axios';
+
 interface SearchResult {
   folders: Array<{
     id: string;
@@ -26,18 +28,11 @@ export const searchFiles = async (query: string): Promise<SearchResult> => {
     return { folders: [], files: [] };
   }
 
-  const response = await fetch(`/api/search?q=${encodeURIComponent(query.trim())}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+  const { data } = await axios.get('/search', {
+    params: {
+      q: query.trim()
+    }
   });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'Search failed');
-  }
-
-  const data = await response.json();
   return data.data;
 };
