@@ -1,10 +1,12 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import Home from './components/Home'
 
 function HomePage() {
   return (
     <div>
-      <Home />
+      <Suspense fallback={<p>Loading..</p>}>
+        <Home />
+      </Suspense>
     </div>
   )
 }
