@@ -11,8 +11,9 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  console.log('router',router);
 
- const handleLoginSubmit = async (data: { email: string; password: string }) => {
+  const handleLoginSubmit = async (data: { email: string; password: string }) => {
     setIsLoading(true);
     setError('');
 
@@ -22,8 +23,7 @@ const Home = () => {
       if (!result.success) {
         setError('Invalid email or password');
       } else {
-        router.refresh();
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }
     } catch (err) {
       setError('An error occurred during login');
@@ -52,8 +52,7 @@ const Home = () => {
       if (!loginResult.success) {
         setError('Account created but login failed. Please try logging in manually.');
       } else {
-        router.refresh();
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Signup failed');
