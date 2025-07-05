@@ -9,13 +9,14 @@ const SignupForm = ({ onSubmit, isLoading }: { onSubmit: (data: { name: string; 
     password: '', 
     confirmPassword: '' 
   });
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({ ...formData });
   };
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Input
         type="text"
         id="name"
@@ -68,7 +69,7 @@ const SignupForm = ({ onSubmit, isLoading }: { onSubmit: (data: { name: string; 
       >
         Create Account
       </Button>
-    </div>
+    </form>
   );
 };
 

@@ -11,7 +11,7 @@ const LoginForm = ({ onSubmit, isLoading }: { onSubmit: (data: { email: string; 
   };
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <Input
         type="email"
         id="email"
@@ -39,11 +39,10 @@ const LoginForm = ({ onSubmit, isLoading }: { onSubmit: (data: { email: string; 
         isLoading={isLoading}
         loadingText="Signing In..."
         className="w-full"
-        onClick={handleSubmit}
       >
         Sign In
       </Button>
-    </div>
+    </form>
   );
 };
 
