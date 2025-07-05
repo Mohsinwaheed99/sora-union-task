@@ -22,6 +22,7 @@ const Home = () => {
       if (!result.success) {
         setError('Invalid email or password');
       } else {
+        router.refresh();
         router.push('/dashboard');
       }
     } catch (err) {
@@ -51,6 +52,7 @@ const Home = () => {
       if (!loginResult.success) {
         setError('Account created but login failed. Please try logging in manually.');
       } else {
+        router.refresh();
         router.push('/dashboard');
       }
     } catch (err: any) {
